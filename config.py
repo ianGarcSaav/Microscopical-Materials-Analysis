@@ -1,13 +1,13 @@
 import os
 
-# Parámetros globales
-PIXELS_TO_UM = 0.5  # 1 px = 500 nm
-IMG_PATH = "images/grain.jpg"
-CLUSTERS_FOLDER = "results/imageClusters"
-CSV_OUTPUT = "results/image_measurements.csv"
-HISTOGRAM_PATH = "results/histograms.png"
+# Global configuration
+pixels_to_um = 0.5  # 1 px = 500 nm
+img_path = "images/grain.jpg"
+clusters_folder = 'results/imageClusters'
+output_csv = 'results/imageMeasurements/image_measurements.csv'
+histogram_path = 'results/imageMeasurements/histograms.png'
 
-# Crear directorios necesarios
-os.makedirs(os.path.dirname(IMG_PATH), exist_ok=True)
-os.makedirs(CLUSTERS_FOLDER, exist_ok=True)
-os.makedirs(os.path.dirname(CSV_OUTPUT), exist_ok=True)
+# Ensure directories exist
+os.makedirs(os.path.dirname(img_path), exist_ok=True)
+os.makedirs(clusters_folder, exist_ok=True)
+os.makedirs(os.path.dirname(output_csv), exist_ok=True)
