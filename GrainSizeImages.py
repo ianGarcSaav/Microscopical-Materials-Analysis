@@ -9,7 +9,7 @@ print("Iniciando código numeros 2...")
 
 # Configuración inicial
 pixels_to_um = 0.5  # 1 px = 500 nm
-img_path = "grainImages/grain.jpg"
+img_path = "grainImages/500X_tuerca_2.jpg"
 
 # Si la imagen no existe, se crea una imagen dummy para probar el pipeline
 if not os.path.exists(img_path):
