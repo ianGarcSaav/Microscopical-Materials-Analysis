@@ -1,0 +1,12 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+.pyc
+    
+# Folders
+images/
+results/
+grainImages/
+
+# Files
+GrainSizeImages.py
+
