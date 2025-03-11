@@ -1,5 +1,6 @@
 from skimage import measure
 import numpy as np
+import cv2
 
 prop_list = [
     'Area',
@@ -14,7 +15,10 @@ prop_list = [
 ]
 
 def measure_properties(labeled_mask, img, pixels_to_um):
-    clusters = measure.regionprops(labeled_mask, intensity_image=img)
+    # Resize img to match the dimensions of labeled_mask
+    img_resized = cv2.resize(img, (labeled_mask.shape[1], labeled_mask.shape[0]))
+    
+    clusters = measure.regionprops(labeled_mask, intensity_image=img_resized)
     measurements = []
     for cluster in clusters:
         row = [cluster.label]
