@@ -50,3 +50,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Resolve conflicts by editing this file
+
+# After saving the resolved file:
+git add "c:\Users\alan_\OneDrive\Escritorio\Microscopical Materials Analysis\src\main.py"
