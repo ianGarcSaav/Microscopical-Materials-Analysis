@@ -1,11 +1,14 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-    
-# Folders
-images/
 results/
-grainImages/
+images/
+src/__pycache__
 
-# Files
-GrainSizeImages.py
+# Archivos de caché de Jupyter Notebook
+*.ipynb_checkpoints/
 
+# Archivos de logs
+*.log
+
+# Archivos compilados de Python
+*.pyc
+*.pyo
+*.pyd

@@ -2,10 +2,10 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-def save_colored_clusters(img2, clusters_folder):
+def save_colored_clusters(img2, output_path):
     img2_uint8 = (img2 * 255).astype(np.uint8)
     img2_bgr = cv2.cvtColor(img2_uint8, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(f"{clusters_folder}/colored_clusters.jpg", img2_bgr)
+    cv2.imwrite(output_path, img2_bgr)
 
 def show_image(img2_bgr):
     cv2.imshow('Colored Grains', img2_bgr)
