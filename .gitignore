@@ -1,0 +1,14 @@
+results/
+images/
+src/__pycache__
+
+# Archivos de caché de Jupyter Notebook
+*.ipynb_checkpoints/
+
+# Archivos de logs
+*.log
+
+# Archivos compilados de Python
+*.pyc
+*.pyo
+*.pyd
