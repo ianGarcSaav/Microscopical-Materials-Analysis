@@ -14,26 +14,26 @@ def read_image(img_path):
         exit()
     return img
 
-def preprocess_image(img, resize_dim=(512, 512), blur_ksize=3, threshold_blocksize=11, threshold_C=2):
-    # Convertir a escala de grises (si no lo está)
+def preprocess_image(img):
+    # Convert to grayscale (if not already)
     if len(img.shape) == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    # Cambiar tamaño de la imagen
-    img = cv2.resize(img, resize_dim)
+    # Resize image to a standard size (optional, adjust as needed)
+    img = cv2.resize(img, (512, 512))
     
-    # Aplicar desenfoque mediano
-    blurred = cv2.medianBlur(img, blur_ksize)
+    # Apply median blur to reduce noise while preserving edges
+    blurred = cv2.medianBlur(img, 3)
     
-    # Aplicar CLAHE para mejorar el contraste
+    # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to enhance contrast
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     contrast_enhanced = clahe.apply(blurred)
     
-    # Aplicar umbral adaptativo
+    # Apply adaptive thresholding for better edge detection
     thresh = cv2.adaptiveThreshold(contrast_enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                   cv2.THRESH_BINARY, threshold_blocksize, threshold_C)
+                                   cv2.THRESH_BINARY, 11, 2)
     
-    # Operaciones morfológicas
+    # Perform morphological operations to clean up the image
     kernel = np.ones((3, 3), np.uint8)
     eroded = cv2.erode(thresh, kernel, iterations=1)
     dilated = cv2.dilate(eroded, kernel, iterations=1)

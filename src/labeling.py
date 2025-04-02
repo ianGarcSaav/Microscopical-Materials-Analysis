@@ -3,17 +3,15 @@ from skimage import color
 import cv2
 import numpy as np
 
-def label_components(mask, connectivity=1):
-    # Ajustar conectividad (1: 4-conectividad, 2: 8-conectividad)
-    structure = ndimage.generate_binary_structure(2, connectivity)
-    labeled_mask, num_labels = ndimage.label(mask, structure=structure)
+def label_components(mask):
+    connectivity = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+    labeled_mask, num_labels = ndimage.label(mask, structure=connectivity)
     return labeled_mask, num_labels
 
 def color_clusters(labeled_mask):
     # Ensure background label is set correctly
     return color.label2rgb(labeled_mask, bg_label=0, bg_color=(0, 0, 0))
 
-# New alternative function using watershed segmentation for improved labeling
 def label_components_watershed(mask):
     # Convert mask to binary image (0,255)
     binary = (mask.astype(np.uint8) * 255)
