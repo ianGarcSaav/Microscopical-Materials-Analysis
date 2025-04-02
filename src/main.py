@@ -11,13 +11,15 @@ from initialize_results import reset_results_folder
 def main():
     print("Procesando todas las imagenes en:", img_folder)
     
-    # Crear carpetas para coloredClusters, LabeledMask y Mask
+    # Crear carpetas para coloredClusters, LabeledMask, Mask y imageCutting
     colored_clusters_folder = os.path.join(clusters_folder, "coloredClusters")
     labeled_mask_folder = os.path.join(clusters_folder, "LabeledMask")
     mask_folder = os.path.join(clusters_folder, "Mask")
+    image_cutting_folder = os.path.join(clusters_folder, "imageCutting")
     os.makedirs(colored_clusters_folder, exist_ok=True)
     os.makedirs(labeled_mask_folder, exist_ok=True)
     os.makedirs(mask_folder, exist_ok=True)
+    os.makedirs(image_cutting_folder, exist_ok=True)
 
     # Listar solo archivos de imagen
     image_files = [f for f in os.listdir(img_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
@@ -63,6 +65,19 @@ def main():
         histogram_filename = f"{os.path.splitext(image_file)[0]}_histogram.jpg"
         histogram_output_path = os.path.join(histogram_folder, histogram_filename)
         generate_histograms(areas, perimeters, equivalent_diameters, histogram_output_path)
+
+        # Paso 6: Dibujar línea roja en la imagen original para indicar el corte
+        height, width = img.shape[:2]
+        resize_dim = (800, 800)  # Asegúrate de que coincida con el tamaño de `preprocess_image`
+        start_x = (width - resize_dim[0]) // 2
+        start_y = (height - resize_dim[1]) // 2
+        end_x = start_x + resize_dim[0]
+        end_y = start_y + resize_dim[1]
+        img_with_cut = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  # Convertir a BGR para dibujar en color
+        cv2.rectangle(img_with_cut, (start_x, start_y), (end_x, end_y), (0, 0, 255), 2)  # Línea roja
+        cutting_output_path = os.path.join(image_cutting_folder, f"{os.path.splitext(image_file)[0]}_cutting.jpg")
+        cv2.imwrite(cutting_output_path, img_with_cut)
+
         print(f"Procesado: {image_file}")
 
 if __name__ == "__main__":
