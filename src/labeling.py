@@ -12,7 +12,6 @@ def color_clusters(labeled_mask):
     # Ensure background label is set correctly
     return color.label2rgb(labeled_mask, bg_label=0, bg_color=(0, 0, 0))
 
-# New alternative function using watershed segmentation for improved labeling
 def label_components_watershed(mask):
     # Convert mask to binary image (0,255)
     binary = (mask.astype(np.uint8) * 255)
