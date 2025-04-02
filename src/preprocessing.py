@@ -19,9 +19,6 @@ def preprocess_image(img):
     if len(img.shape) == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    # Resize image to a standard size (optional, adjust as needed)
-    img = cv2.resize(img, (512, 512))
-    
     # Apply median blur to reduce noise while preserving edges
     blurred = cv2.medianBlur(img, 3)
     

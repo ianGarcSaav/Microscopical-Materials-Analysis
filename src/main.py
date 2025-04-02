@@ -67,14 +67,8 @@ def main():
         generate_histograms(areas, perimeters, equivalent_diameters, histogram_output_path)
 
         # Paso 6: Dibujar línea roja en la imagen original para indicar el corte
-        height, width = img.shape[:2]
-        resize_dim = (800, 800)  # Asegúrate de que coincida con el tamaño de `preprocess_image`
-        start_x = (width - resize_dim[0]) // 2
-        start_y = (height - resize_dim[1]) // 2
-        end_x = start_x + resize_dim[0]
-        end_y = start_y + resize_dim[1]
         img_with_cut = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  # Convertir a BGR para dibujar en color
-        cv2.rectangle(img_with_cut, (start_x, start_y), (end_x, end_y), (0, 0, 255), 2)  # Línea roja
+        cv2.rectangle(img_with_cut, (0, 0), (img.shape[1], img.shape[0]), (0, 0, 255), 2)  # Línea roja en todo el borde
         cutting_output_path = os.path.join(image_cutting_folder, f"{os.path.splitext(image_file)[0]}_cutting.jpg")
         cv2.imwrite(cutting_output_path, img_with_cut)
 
