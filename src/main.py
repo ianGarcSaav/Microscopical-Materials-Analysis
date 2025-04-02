@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import cv2  # Importar para guardar imágenes intermedias
 from config import img_folder, clusters_folder, csv_folder, histogram_folder, pixels_to_um
 from preprocessing import read_image, preprocess_image
 from labeling import label_components, color_clusters
@@ -23,9 +24,15 @@ def main():
 
         # Paso 2: Preprocesamiento
         mask = preprocess_image(img)
+        # Guardar máscara preprocesada para depuración
+        mask_output_path = os.path.join(clusters_folder, f"{os.path.splitext(image_file)[0]}_mask.jpg")
+        cv2.imwrite(mask_output_path, (mask * 255).astype(np.uint8))
 
         # Paso 3: Etiquetado de componentes
         labeled_mask, _ = label_components(mask)
+        # Guardar máscara etiquetada para depuración
+        labeled_output_path = os.path.join(clusters_folder, f"{os.path.splitext(image_file)[0]}_labeledMask.jpg")
+        cv2.imwrite(labeled_output_path, (labeled_mask / labeled_mask.max() * 255).astype(np.uint8))
 
         # Visualización de clusters coloreados
         img2 = color_clusters(labeled_mask)

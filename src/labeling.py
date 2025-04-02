@@ -3,9 +3,10 @@ from skimage import color
 import cv2
 import numpy as np
 
-def label_components(mask):
-    connectivity = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
-    labeled_mask, num_labels = ndimage.label(mask, structure=connectivity)
+def label_components(mask, connectivity=1):
+    # Ajustar conectividad (1: 4-conectividad, 2: 8-conectividad)
+    structure = ndimage.generate_binary_structure(2, connectivity)
+    labeled_mask, num_labels = ndimage.label(mask, structure=structure)
     return labeled_mask, num_labels
 
 def color_clusters(labeled_mask):
