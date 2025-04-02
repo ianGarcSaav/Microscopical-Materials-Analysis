@@ -6,6 +6,7 @@ from preprocessing import read_image, preprocess_image
 from labeling import label_components, color_clusters
 from measurement import measure_properties, save_measurements_to_csv
 from visualization import save_colored_clusters, generate_histograms
+from initialize_results import reset_results_folder
 
 def main():
     print("Procesando todas las imagenes en:", img_folder)
@@ -56,4 +57,8 @@ def main():
         print(f"Procesado: {image_file}")
 
 if __name__ == "__main__":
+    # Reiniciar la carpeta de resultados al inicio
+    reset_results_folder()
+    
+    print("Programa principal iniciado.")
     main()
