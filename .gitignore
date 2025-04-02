@@ -1,7 +1,12 @@
+# Carpetas del proyecto
 results/
 images/
+models/
 src/__pycache__
 
+# Archivos del proyecto
+Imagen prueba.pptx
+Test.png
 
 # Archivos de caché de Jupyter Notebook
 *.ipynb_checkpoints/
