@@ -11,13 +11,15 @@ from initialize_results import reset_results_folder
 def main():
     print("Procesando todas las imagenes en:", img_folder)
     
-    # Crear carpetas para coloredClusters, LabeledMask y Mask
+    # Crear carpetas para coloredClusters, LabeledMask, Mask y imageCutting
     colored_clusters_folder = os.path.join(clusters_folder, "coloredClusters")
     labeled_mask_folder = os.path.join(clusters_folder, "LabeledMask")
     mask_folder = os.path.join(clusters_folder, "Mask")
+    image_cutting_folder = os.path.join(clusters_folder, "imageCutting")
     os.makedirs(colored_clusters_folder, exist_ok=True)
     os.makedirs(labeled_mask_folder, exist_ok=True)
     os.makedirs(mask_folder, exist_ok=True)
+    os.makedirs(image_cutting_folder, exist_ok=True)
 
     # Listar solo archivos de imagen
     image_files = [f for f in os.listdir(img_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
@@ -63,6 +65,13 @@ def main():
         histogram_filename = f"{os.path.splitext(image_file)[0]}_histogram.jpg"
         histogram_output_path = os.path.join(histogram_folder, histogram_filename)
         generate_histograms(areas, perimeters, equivalent_diameters, histogram_output_path)
+
+        # Paso 6: Dibujar línea roja en la imagen original para indicar el corte
+        img_with_cut = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  # Convertir a BGR para dibujar en color
+        cv2.rectangle(img_with_cut, (0, 0), (img.shape[1], img.shape[0]), (0, 0, 255), 2)  # Línea roja en todo el borde
+        cutting_output_path = os.path.join(image_cutting_folder, f"{os.path.splitext(image_file)[0]}_cutting.jpg")
+        cv2.imwrite(cutting_output_path, img_with_cut)
+
         print(f"Procesado: {image_file}")
 
 if __name__ == "__main__":
