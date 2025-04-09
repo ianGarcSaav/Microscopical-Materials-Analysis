@@ -3,8 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def save_colored_clusters(img2, output_path):
-    img2_uint8 = (img2 * 255).astype(np.uint8)
-    img2_bgr = cv2.cvtColor(img2_uint8, cv2.COLOR_RGB2BGR)
+    # Verificar si la imagen ya está en formato BGR
+    if img2.dtype == np.uint8 and img2.shape[-1] == 3:
+        img2_bgr = img2  # La imagen ya está en BGR
+    else:
+        img2_uint8 = (img2 * 255).astype(np.uint8)
+        img2_bgr = cv2.cvtColor(img2_uint8, cv2.COLOR_RGB2BGR)
+
+    # Guardar la imagen
     cv2.imwrite(output_path, img2_bgr)
 
 def show_image(img2_bgr):

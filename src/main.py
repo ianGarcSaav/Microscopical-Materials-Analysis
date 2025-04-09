@@ -57,7 +57,7 @@ def main():
         cluster_labels = perform_kmeans_clustering(csv_output_path, n_clusters=3)  # You can adjust the number of clusters
 
         # Visualización de clusters coloreados
-        img2 = color_clusters(labeled_mask, cluster_labels)
+        img2 = color_clusters(labeled_mask, cluster_labels=None)  # No sobrescribir colores
         colored_filename = f"{os.path.splitext(image_file)[0]}_coloredClusters.jpg"
         colored_output_path = os.path.join(colored_clusters_folder, colored_filename)
         save_colored_clusters(img2, colored_output_path)
@@ -84,34 +84,49 @@ def main():
         # Paso 7: Detectar y clasificar figuras geométricas
         image = cv2.imread(img_path)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        _, thresh_image = cv2.threshold(gray_image, 220, 255, cv2.THRESH_BINARY_INV)
+        _, thresh_image = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY_INV)  # Cambiar de 220 a 200
         contours, _ = cv2.findContours(thresh_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         for i, contour in enumerate(contours):
             if i == 0:
                 continue
 
-            epsilon = 0.01 * cv2.arcLength(contour, True)
+            # Aproximar el contorno
+            epsilon = 0.005 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
-            cv2.drawContours(image, [approx], 0, (0, 255, 0), 3)
 
+            # Calcular el centro aproximado de la figura
             x, y, w, h = cv2.boundingRect(approx)
             x_mid = int(x + w / 2)
             y_mid = int(y + h / 2)
 
-            if len(approx) == 3:
-                shape = "Triangle"
+            # Calcular área y perímetro
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+
+            # Calcular circularidad
+            circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
+
+            # Clasificar la figura como circular o cuadrilátera
+            if circularity > 0.8:
+                shape = "Circle"
+                color = (0, 0, 255)  # Rojo para círculos
             elif len(approx) == 4:
                 shape = "Quadrilateral"
-            elif len(approx) == 5:
-                shape = "Pentagon"
-            elif len(approx) == 6:
-                shape = "Hexagon"
+                color = (255, 0, 0)  # Azul para cuadriláteros
             else:
-                shape = "Circle"
+                continue  # Descartar otras figuras
 
-            cv2.putText(image, shape, (x_mid - 50, y_mid), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            # Depuración: Imprimir clasificación y color asignado
+            print(f"Figura detectada: {shape}, Color asignado: {color}")
 
+            # Dibujar el fondo coloreado
+            cv2.drawContours(image, [contour], -1, color, thickness=cv2.FILLED)
+
+            # Etiquetar la figura en la imagen
+            cv2.putText(image, shape, (x_mid - 50, y_mid), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+        # Guardar la imagen con las figuras detectadas y coloreadas
         output_path = os.path.join(detected_shapes_folder, f"{os.path.splitext(image_file)[0]}_shapes.jpg")
         cv2.imwrite(output_path, image)
         print(f"Figuras detectadas y guardadas en: {output_path}")

@@ -15,32 +15,31 @@ def color_clusters(labeled_mask, cluster_labels=None):
     Args:
         labeled_mask (numpy.ndarray): The labeled mask.
         cluster_labels (dict, optional): A dictionary mapping cluster labels to K-Means cluster assignments.
-                                         If None, the clusters are colored randomly. Defaults to None.
+                                         If None, the clusters are colored based on their classification.
 
     Returns:
         numpy.ndarray: The colored image.
     """
-    if cluster_labels is None:
-        # If no cluster labels are provided, color the clusters randomly
-        return color.label2rgb(labeled_mask, bg_label=0, bg_color=(0, 0, 0))
-    else:
-        # Create a color map based on the K-Means cluster assignments
-        unique_labels = np.unique(labeled_mask[labeled_mask != 0])
-        
-        # Generate a color for each K-Means cluster
-        kmeans_clusters = set(cluster_labels.values())
-        color_map = {cluster: np.random.rand(3) for cluster in kmeans_clusters}
+    # Crear una imagen en blanco para colorear
+    colored_img = np.zeros((labeled_mask.shape[0], labeled_mask.shape[1], 3), dtype=np.uint8)
 
-        # Assign colors to each label based on its K-Means cluster assignment
-        colored_img = np.zeros((labeled_mask.shape[0], labeled_mask.shape[1], 3))
-        for label in unique_labels:
-            kmeans_cluster = cluster_labels.get(label)
-            if kmeans_cluster is not None:
-                colored_img[labeled_mask == label] = color_map[kmeans_cluster]
-            else:
-                colored_img[labeled_mask == label] = [0,0,0]  # Black if no cluster assignment
+    # Asignar colores específicos según la clasificación
+    for label in np.unique(labeled_mask):
+        if label == 0:  # Fondo
+            continue
 
-        return colored_img
+        # Obtener la clasificación del cluster
+        if cluster_labels and label in cluster_labels:
+            cluster = cluster_labels[label]
+            color = (0, 255, 0) if cluster == 0 else (255, 255, 0)  # Ejemplo de colores para clusters
+        else:
+            # Colores predeterminados para círculos y cuadriláteros
+            color = (0, 0, 255) if label % 2 == 0 else (255, 0, 0)  # Alternar colores como ejemplo
+
+        # Aplicar el color al cluster
+        colored_img[labeled_mask == label] = color
+
+    return colored_img
 
 def label_components_watershed_advanced(mask):
     # Convert mask to binary image (0,255)
