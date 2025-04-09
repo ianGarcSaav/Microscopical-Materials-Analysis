@@ -6,7 +6,6 @@ from preprocessing import read_image, preprocess_image
 from labeling import label_components, color_clusters
 from measurement import measure_properties, save_measurements_to_csv
 from visualization import save_colored_clusters, generate_histograms
-from initialize_results import reset_results_folder
 
 def main():
     print("Procesando todas las imagenes en:", img_folder)
@@ -66,17 +65,9 @@ def main():
         histogram_output_path = os.path.join(histogram_folder, histogram_filename)
         generate_histograms(areas, perimeters, equivalent_diameters, histogram_output_path)
 
-        # Paso 6: Dibujar línea roja en la imagen original para indicar el corte
-        img_with_cut = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  # Convertir a BGR para dibujar en color
-        cv2.rectangle(img_with_cut, (0, 0), (img.shape[1], img.shape[0]), (0, 0, 255), 2)  # Línea roja en todo el borde
-        cutting_output_path = os.path.join(image_cutting_folder, f"{os.path.splitext(image_file)[0]}_cutting.jpg")
-        cv2.imwrite(cutting_output_path, img_with_cut)
-
         print(f"Procesado: {image_file}")
 
 if __name__ == "__main__":
-    # Reiniciar la carpeta de resultados al inicio
-    reset_results_folder()
     
     print("Programa principal iniciado.")
     main()
