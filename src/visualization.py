@@ -12,27 +12,31 @@ def show_image(img2_bgr):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def generate_histograms(areas, perimeters, equivalent_diameters, histogram_path):
+def generate_histograms(areas, perimeters, equivalent_diameters, histogram_path,
+                        num_bins=10, area_color='blue', perimeter_color='green', diameter_color='red',
+                        area_title='Histograma del Área', perimeter_title='Histograma del Perímetro',
+                        diameter_title='Histograma del Diámetro Equivalente', show=False):
     plt.figure(figsize=(15, 5))
 
     plt.subplot(1, 3, 1)
-    plt.hist(areas, bins=10, color='blue', edgecolor='black')
-    plt.title('Histograma del Área')
+    plt.hist(areas, bins=num_bins, color=area_color, edgecolor='black')
+    plt.title(area_title)
     plt.xlabel('Área (um²)')
     plt.ylabel('Frecuencia')
 
     plt.subplot(1, 3, 2)
-    plt.hist(perimeters, bins=10, color='green', edgecolor='black')
-    plt.title('Histograma del Perímetro')
+    plt.hist(perimeters, bins=num_bins, color=perimeter_color, edgecolor='black')
+    plt.title(perimeter_title)
     plt.xlabel('Perímetro (um)')
     plt.ylabel('Frecuencia')
 
     plt.subplot(1, 3, 3)
-    plt.hist(equivalent_diameters, bins=10, color='red', edgecolor='black')
-    plt.title('Histograma del Diámetro Equivalente')
+    plt.hist(equivalent_diameters, bins=num_bins, color=diameter_color, edgecolor='black')
+    plt.title(diameter_title)
     plt.xlabel('Diámetro (um)')
     plt.ylabel('Frecuencia')
 
     plt.tight_layout()
     plt.savefig(histogram_path)
-    # plt.show()
+    if show:
+        plt.show()

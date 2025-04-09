@@ -22,25 +22,21 @@ def measure_properties(labeled_mask, img, pixels_to_um):
     measurements = []
     for cluster in clusters:
         row = [cluster.label]
+        
+        prop_calculations = {
+            'Area': cluster.area * (pixels_to_um ** 2),
+            'orientation': np.degrees(cluster.orientation),
+            'Perimeter': cluster.perimeter * pixels_to_um,
+            'equivalent_diameter': cluster.equivalent_diameter * pixels_to_um,
+            'MajorAxisLength': cluster.major_axis_length * pixels_to_um,
+            'MinorAxisLength': cluster.minor_axis_length * pixels_to_um,
+            'MinIntensity': cluster.min_intensity,
+            'MeanIntensity': cluster.mean_intensity,
+            'MaxIntensity': cluster.max_intensity
+        }
+        
         for prop in prop_list:
-            if prop == 'Area':
-                value = cluster.area * (pixels_to_um ** 2)
-            elif prop == 'orientation':
-                value = np.degrees(cluster.orientation)
-            elif prop == 'Perimeter':
-                value = cluster.perimeter * pixels_to_um
-            elif prop == 'equivalent_diameter':
-                value = cluster.equivalent_diameter * pixels_to_um
-            elif prop == 'MajorAxisLength':
-                value = cluster.major_axis_length * pixels_to_um
-            elif prop == 'MinorAxisLength':
-                value = cluster.minor_axis_length * pixels_to_um
-            elif prop == 'MinIntensity':
-                value = cluster.min_intensity
-            elif prop == 'MeanIntensity':
-                value = cluster.mean_intensity
-            elif prop == 'MaxIntensity':
-                value = cluster.max_intensity
+            value = prop_calculations.get(prop)
             row.append(value)
         measurements.append(row)
     return measurements
