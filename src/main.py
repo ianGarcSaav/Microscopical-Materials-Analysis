@@ -16,12 +16,10 @@ def main():
     colored_clusters_folder = os.path.join(clusters_folder, "coloredClusters")
     labeled_mask_folder = os.path.join(clusters_folder, "LabeledMask")
     mask_folder = os.path.join(clusters_folder, "Mask")
-    image_cutting_folder = os.path.join(clusters_folder, "imageCutting")
     detected_shapes_folder = os.path.join(clusters_folder, "detectedShapes")
     os.makedirs(colored_clusters_folder, exist_ok=True)
     os.makedirs(labeled_mask_folder, exist_ok=True)
     os.makedirs(mask_folder, exist_ok=True)
-    os.makedirs(image_cutting_folder, exist_ok=True)
     os.makedirs(detected_shapes_folder, exist_ok=True)
 
     # Listar solo archivos de imagen
