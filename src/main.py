@@ -1,11 +1,13 @@
 import os
 import numpy as np
-import cv2  # Importar para guardar imágenes intermedias
+import cv2
 from config import img_folder, clusters_folder, csv_folder, histogram_folder, pixels_to_um
 from preprocessing import read_image, preprocess_image
 from labeling import label_components, color_clusters
 from measurement import measure_properties, save_measurements_to_csv
 from visualization import save_colored_clusters, generate_histograms
+from clustering import perform_kmeans_clustering, save_clustered_data  # Import clustering functions
+import pandas as pd
 
 def main():
     print("Procesando todas las imagenes en:", img_folder)
@@ -28,7 +30,7 @@ def main():
 
     for image_file in image_files:
         img_path = os.path.join(img_folder, image_file)
-        # print("Procesando:", image_file)
+        print("Procesando:", image_file)
 
         # Paso 1: Leer imagen
         img = read_image(img_path)
@@ -45,19 +47,33 @@ def main():
         labeled_output_path = os.path.join(labeled_mask_folder, f"{os.path.splitext(image_file)[0]}_labeledMask.jpg")
         cv2.imwrite(labeled_output_path, (labeled_mask / labeled_mask.max() * 255).astype(np.uint8))
 
-        # Visualización de clusters coloreados
-        img2 = color_clusters(labeled_mask)
-        colored_filename = f"{os.path.splitext(image_file)[0]}_coloredClusters.jpg"
-        colored_output_path = os.path.join(colored_clusters_folder, colored_filename)
-        save_colored_clusters(img2, colored_output_path)
-
         # Paso 4: Medición de propiedades y guardado en CSV
         measurements = measure_properties(labeled_mask, img, pixels_to_um)
         csv_filename = f"{os.path.splitext(image_file)[0]}.csv"
         csv_output_path = os.path.join(csv_folder, csv_filename)
         save_measurements_to_csv(measurements, csv_output_path)
 
-        # Paso 5: Generar histogramas
+        # Paso 5: Perform K-Means clustering
+        cluster_labels = perform_kmeans_clustering(csv_output_path, n_clusters=3)  # You can adjust the number of clusters
+
+        # Visualización de clusters coloreados
+        img2 = color_clusters(labeled_mask, cluster_labels)
+        colored_filename = f"{os.path.splitext(image_file)[0]}_coloredClusters.jpg"
+        colored_output_path = os.path.join(colored_clusters_folder, colored_filename)
+        save_colored_clusters(img2, colored_output_path)
+
+        if cluster_labels is not None:
+            # Read the original CSV data
+            original_df = pd.read_csv(csv_output_path)
+
+            # Add the cluster labels to the DataFrame
+            original_df['Cluster'] = original_df['Label'].map(cluster_labels)
+
+            clustered_csv_filename = f"{os.path.splitext(image_file)[0]}_clustered.csv"
+            clustered_csv_output_path = os.path.join(csv_folder, clustered_csv_filename)
+            save_clustered_data(original_df, clustered_csv_output_path)
+
+        # Paso 6: Generar histogramas
         areas = [row[1] for row in measurements]
         perimeters = [row[5] for row in measurements]
         equivalent_diameters = [row[2] for row in measurements]
