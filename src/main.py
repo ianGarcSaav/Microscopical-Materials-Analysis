@@ -10,17 +10,19 @@ from clustering import perform_kmeans_clustering, save_clustered_data  # Import 
 import pandas as pd
 
 def main():
-    print("Procesando todas las imagenes en:", img_folder)
+    print("Procesando todas las imágenes en:", img_folder)
     
-    # Crear carpetas para coloredClusters, LabeledMask, Mask y imageCutting
+    # Crear carpetas para coloredClusters, LabeledMask, Mask, imageCutting y detectedShapes
     colored_clusters_folder = os.path.join(clusters_folder, "coloredClusters")
     labeled_mask_folder = os.path.join(clusters_folder, "LabeledMask")
     mask_folder = os.path.join(clusters_folder, "Mask")
     image_cutting_folder = os.path.join(clusters_folder, "imageCutting")
+    detected_shapes_folder = os.path.join(clusters_folder, "detectedShapes")
     os.makedirs(colored_clusters_folder, exist_ok=True)
     os.makedirs(labeled_mask_folder, exist_ok=True)
     os.makedirs(mask_folder, exist_ok=True)
     os.makedirs(image_cutting_folder, exist_ok=True)
+    os.makedirs(detected_shapes_folder, exist_ok=True)
 
     # Listar solo archivos de imagen
     image_files = [f for f in os.listdir(img_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))]
@@ -81,9 +83,43 @@ def main():
         histogram_output_path = os.path.join(histogram_folder, histogram_filename)
         generate_histograms(areas, perimeters, equivalent_diameters, histogram_output_path)
 
+        # Paso 7: Detectar y clasificar figuras geométricas
+        image = cv2.imread(img_path)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _, thresh_image = cv2.threshold(gray_image, 220, 255, cv2.THRESH_BINARY_INV)
+        contours, _ = cv2.findContours(thresh_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        for i, contour in enumerate(contours):
+            if i == 0:
+                continue
+
+            epsilon = 0.01 * cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, epsilon, True)
+            cv2.drawContours(image, [approx], 0, (0, 255, 0), 3)
+
+            x, y, w, h = cv2.boundingRect(approx)
+            x_mid = int(x + w / 2)
+            y_mid = int(y + h / 2)
+
+            if len(approx) == 3:
+                shape = "Triangle"
+            elif len(approx) == 4:
+                shape = "Quadrilateral"
+            elif len(approx) == 5:
+                shape = "Pentagon"
+            elif len(approx) == 6:
+                shape = "Hexagon"
+            else:
+                shape = "Circle"
+
+            cv2.putText(image, shape, (x_mid - 50, y_mid), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+        output_path = os.path.join(detected_shapes_folder, f"{os.path.splitext(image_file)[0]}_shapes.jpg")
+        cv2.imwrite(output_path, image)
+        print(f"Figuras detectadas y guardadas en: {output_path}")
+
         print(f"Procesado: {image_file}")
 
 if __name__ == "__main__":
-    
     print("Programa principal iniciado.")
     main()
