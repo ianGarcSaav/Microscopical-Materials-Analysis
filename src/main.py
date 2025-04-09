@@ -28,7 +28,7 @@ def main():
 
     for image_file in image_files:
         img_path = os.path.join(img_folder, image_file)
-        print("Procesando:", image_file)
+        # print("Procesando:", image_file)
 
         # Paso 1: Leer imagen
         img = read_image(img_path)
