@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import cv2  # Importar para guardar imágenes intermedias
+
 import random  # Importar para generar colores aleatorios
 from config import img_folder, clusters_folder, csv_folder, histogram_folder, pixels_to_um
 from preprocessing import read_image, preprocess_image
@@ -98,6 +99,13 @@ def main():
             colored_labeled_mask[labeled_mask == label] = color_map[(shape, size)]
 
         # Guardado en CSV
+        img2 = color_clusters(labeled_mask)
+        colored_filename = f"{os.path.splitext(image_file)[0]}_coloredClusters.jpg"
+        colored_output_path = os.path.join(colored_clusters_folder, colored_filename)
+        save_colored_clusters(img2, colored_output_path)
+
+        # Paso 4: Medición de propiedades y guardado en CSV
+        measurements = measure_properties(labeled_mask, img, pixels_to_um)
         csv_filename = f"{os.path.splitext(image_file)[0]}.csv"
         csv_output_path = os.path.join(csv_folder, csv_filename)
         save_measurements_to_csv(measurements, csv_output_path)
