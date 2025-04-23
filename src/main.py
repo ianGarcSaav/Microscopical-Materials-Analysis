@@ -32,27 +32,20 @@ def main():
         # Paso 1: Leer imagen
         img = read_image(img_path)
 
-        # Paso 2: Preprocesamiento (Using original image 'img')
+        # Paso 2: Preprocesamiento y detección de bordes
+        # Preprocesar imagen y guardar máscara
         mask = preprocess_image(img)
-        # Guardar máscara preprocesada en Mask (Optional, kept for debugging/comparison)
-        mask_output_path = os.path.join(mask_folder, f"{os.path.splitext(image_file)[0]}_mask.jpg")
-        cv2.imwrite(mask_output_path, (mask * 255).astype(np.uint8))
-
-        # Ensure image is grayscale float32 for Canny detector
-        if len(img.shape) == 3 and img.shape[2] == 3:
-            img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        else:
-            img_gray = img  # Assume already grayscale if not 3 channels
-        # Apply Canny to the original grayscale image, not the preprocessed mask
-        img_gray_float = img_gray.astype(np.float32) / 255.0
-
-        edges = canny_edge_detector(img_gray_float)  # Apply Canny
-        # Convert edges to uint8 for saving and potential use
+        mask_filename = f"{os.path.splitext(image_file)[0]}_mask.jpg"
+        cv2.imwrite(os.path.join(mask_folder, mask_filename), (mask * 255).astype(np.uint8))
+        
+        # Convertir imagen a escala de grises si es necesario
+        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+        
+        # Aplicar detector de Canny y guardar resultado
+        edges = canny_edge_detector(img_gray.astype(np.float32) / 255.0)
         edges_uint8 = edges.astype(np.uint8)
-        # Save edge map
-        edges_output_path = os.path.join(edges_folder, f"{os.path.splitext(image_file)[0]}_edges.jpg")
-        cv2.imwrite(edges_output_path, edges_uint8)
-        # --- End of Edge Detection Step ---
+        edges_filename = f"{os.path.splitext(image_file)[0]}_edges.jpg"
+        cv2.imwrite(os.path.join(edges_folder, edges_filename), edges_uint8)
 
         # Visualización de clusters coloreados (Now using edges_uint8 as input)
         # WARNING: Check if color_clusters handles binary edge input correctly.

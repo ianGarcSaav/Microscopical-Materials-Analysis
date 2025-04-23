@@ -108,4 +108,4 @@ if __name__ == "__main__":
     plt.axis('off')
     plt.subplot(122), plt.imshow(edge_map, cmap='gray'), plt.title('Canny Edges')
     plt.axis('off')
-    plt.show()
+    plt.show()  
