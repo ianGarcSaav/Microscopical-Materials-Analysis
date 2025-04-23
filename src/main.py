@@ -1,9 +1,10 @@
 import os
 import numpy as np
 import cv2  # Importar para guardar imágenes intermedias
+import random  # Importar para generar colores aleatorios
 from config import img_folder, clusters_folder, csv_folder, histogram_folder, pixels_to_um
 from preprocessing import read_image, preprocess_image
-from labeling import label_components, color_clusters
+from labeling import label_components, classify_shapes
 from measurement import measure_properties, save_measurements_to_csv
 from visualization import save_colored_clusters, generate_histograms
 
@@ -46,13 +47,57 @@ def main():
         cv2.imwrite(labeled_output_path, (labeled_mask / labeled_mask.max() * 255).astype(np.uint8))
 
         # Visualización de clusters coloreados
-        img2 = color_clusters(labeled_mask)
-        colored_filename = f"{os.path.splitext(image_file)[0]}_coloredClusters.jpg"
-        colored_output_path = os.path.join(colored_clusters_folder, colored_filename)
-        save_colored_clusters(img2, colored_output_path)
+        unique_labels = np.unique(labeled_mask)
+        color_map = {label: [random.randint(0, 255) for _ in range(3)] for label in unique_labels if label != 0}
+        colored_labeled_mask = np.zeros((*labeled_mask.shape, 3), dtype=np.uint8)
+        for label, color in color_map.items():
+            colored_labeled_mask[labeled_mask == label] = color
 
-        # Paso 4: Medición de propiedades y guardado en CSV
+        # Guardar imagen coloreada
+        colored_output_path = os.path.join(colored_clusters_folder, f"{os.path.splitext(image_file)[0]}_colored.jpg")
+        cv2.imwrite(colored_output_path, colored_labeled_mask)
+
+        # Paso 4: Medición de propiedades
         measurements = measure_properties(labeled_mask, img, pixels_to_um)
+
+        # Clasificar figuras por forma y tamaño
+        classifications = {}
+        for measurement in measurements:
+            label = measurement[0]
+            area = measurement[1]
+            perimeter = measurement[5]
+
+            # Calcular circularidad
+            circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
+
+            # Clasificar por forma
+            if circularity > 0.8:
+                shape = "circle"
+            elif 0.5 < circularity <= 0.8:
+                shape = "oval"
+            else:
+                shape = "diamond"
+
+            # Clasificar por tamaño
+            if area < 5000:
+                size = "small"
+            elif 5000 <= area < 20000:
+                size = "medium"
+            else:
+                size = "large"
+
+            classifications[label] = (shape, size)
+
+        # Asignar colores únicos a cada combinación de forma y tamaño
+        unique_classes = set(classifications.values())
+        color_map = {cls: [random.randint(0, 255) for _ in range(3)] for cls in unique_classes}
+
+        # Crear una imagen coloreada
+        colored_labeled_mask = np.zeros((*labeled_mask.shape, 3), dtype=np.uint8)
+        for label, (shape, size) in classifications.items():
+            colored_labeled_mask[labeled_mask == label] = color_map[(shape, size)]
+
+        # Guardado en CSV
         csv_filename = f"{os.path.splitext(image_file)[0]}.csv"
         csv_output_path = os.path.join(csv_folder, csv_filename)
         save_measurements_to_csv(measurements, csv_output_path)
