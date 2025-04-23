@@ -13,11 +13,6 @@ def save_colored_clusters(img2, output_path):
     # Guardar la imagen
     cv2.imwrite(output_path, img2_bgr)
 
-def show_image(img2_bgr):
-    cv2.imshow('Colored Grains', img2_bgr)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
 def generate_histograms(areas, perimeters, equivalent_diameters, histogram_path,
                         num_bins=10, area_color='blue', perimeter_color='green', diameter_color='red',
                         area_title='Histograma del Área', perimeter_title='Histograma del Perímetro',
@@ -46,3 +41,45 @@ def generate_histograms(areas, perimeters, equivalent_diameters, histogram_path,
     plt.savefig(histogram_path)
     if show:
         plt.show()
+
+def visualize_edge_detection_steps(original, smoothed, edges, filled, save_path=None, show=False):
+    """
+    Visualiza los pasos intermedios en la detección de bordes con Canny.
+    
+    Args:
+        original: Imagen original
+        smoothed: Imagen después del suavizado Gaussiano
+        edges: Bordes detectados por Canny
+        filled: Imagen con regiones rellenadas
+        save_path: Ruta para guardar la visualización (opcional)
+        show: Si es True, muestra la visualización en pantalla
+    """
+    plt.figure(figsize=(16, 4))
+    
+    plt.subplot(141)
+    plt.imshow(original, cmap='gray')
+    
+    plt.subplot(142)
+    plt.imshow(smoothed, cmap='gray')
+    plt.title('Suavizado Gaussiano')
+    plt.axis('off')
+    
+    plt.subplot(143)
+    plt.imshow(edges, cmap='gray')
+    plt.title('Bordes Canny')
+    plt.axis('off')
+    
+    plt.subplot(144)
+    plt.imshow(filled, cmap='gray')
+    plt.title('Regiones Rellenadas')
+    plt.axis('off')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path)
+    
+    if show:
+        plt.show()
+    else:
+        plt.close()
