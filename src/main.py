@@ -107,7 +107,7 @@ def main():
             # Calcular circularidad
             circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
 
-            # Clasificar la figura como circular o cuadrilátera
+            # Clasificar la figura como circular, cuadrilátera o no clasificada
             if circularity > 0.8:
                 shape = "Circle"
                 color = (0, 0, 255)  # Rojo para círculos
@@ -115,13 +115,13 @@ def main():
                 shape = "Quadrilateral"
                 color = (255, 0, 0)  # Azul para cuadriláteros
             else:
-                continue  # Descartar otras figuras
+                shape = "Unclassified"
+                color = (0, 255, 0)  # Verde para figuras no clasificadas
 
-            # Depuración: Imprimir clasificación y color asignado
-            print(f"Figura detectada: {shape}, Color asignado: {color}")
-
-            # Dibujar el fondo coloreado
-            cv2.drawContours(image, [contour], -1, color, thickness=cv2.FILLED)
+            # Crear una máscara binaria para rellenar el área interna
+            mask = np.zeros(image.shape[:2], dtype=np.uint8)
+            cv2.drawContours(mask, [contour], -1, 255, thickness=cv2.FILLED)
+            image[mask == 255] = color  # Aplicar el color al área interna
 
             # Etiquetar la figura en la imagen
             cv2.putText(image, shape, (x_mid - 50, y_mid), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
