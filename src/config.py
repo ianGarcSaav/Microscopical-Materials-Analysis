@@ -1,7 +1,7 @@
 import os
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-img_folder = os.path.join(base_path, "images/grains")  # images folder is outside src
+img_folder = os.path.join(base_path, "images/articulo")  # images folder is outside src
 clusters_folder = os.path.join(base_path, "results", "imageClusters")
 csv_folder = os.path.join(base_path, "results", "imageMeasurements", "csv")
 histogram_folder = os.path.join(base_path, "results", "imageMeasurements", "histograms")
