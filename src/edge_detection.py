@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import ndimage
-import imageio
+
 
 def gaussian_filter(image: np.ndarray, sigma: float = 1.4) -> np.ndarray:
     """(a) Smooth the image with a Gaussian filter."""
@@ -17,36 +17,39 @@ def sobel_filters(image: np.ndarray):
     return (G, theta)
 
 def non_max_suppression(G: np.ndarray, theta: np.ndarray) -> np.ndarray:
-    """(c) Thin edges by keeping only local maxima."""
+    """(c) Thin edges by keeping only local maxima using vectorized operations."""
     M, N = G.shape
     Z = np.zeros((M,N), dtype=np.float32)
+    
+    # Convert angles to degrees and shift to positive values
     angle = theta * 180. / np.pi
-    angle[angle<0] += 180
-
-    for i in range(1, M-1):
-        for j in range(1, N-1):
-            q = 255; r = 255
-            # 0°
-            if (0 <= angle[i,j] < 22.5) or (157.5 <= angle[i,j] <= 180):
-                q = G[i, j+1]
-                r = G[i, j-1]
-            # 45°
-            elif 22.5 <= angle[i,j] < 67.5:
-                q = G[i+1, j-1]
-                r = G[i-1, j+1]
-            # 90°
-            elif 67.5 <= angle[i,j] < 112.5:
-                q = G[i+1, j]
-                r = G[i-1, j]
-            # 135°
-            elif 112.5 <= angle[i,j] < 157.5:
-                q = G[i-1, j-1]
-                r = G[i+1, j+1]
-
-            if (G[i,j] >= q) and (G[i,j] >= r):
-                Z[i,j] = G[i,j]
-            else:
-                Z[i,j] = 0
+    angle[angle < 0] += 180
+    
+    # Pad the gradient magnitude array
+    G_pad = np.pad(G, pad_width=1, mode='constant', constant_values=0)
+    
+    # Create arrays for the 8 neighboring pixels
+    n1 = G_pad[1:-1, 2:]  # right
+    n2 = G_pad[2:, 2:]    # bottom-right
+    n3 = G_pad[2:, 1:-1]  # bottom
+    n4 = G_pad[2:, :-2]   # bottom-left
+    n5 = G_pad[1:-1, :-2] # left
+    n6 = G_pad[:-2, :-2]  # top-left
+    n7 = G_pad[:-2, 1:-1] # top
+    n8 = G_pad[:-2, 2:]   # top-right
+    
+    # Create masks for different angle ran  ges
+    mask1 = ((0 <= angle) & (angle < 22.5)) | ((157.5 <= angle) & (angle <= 180))
+    mask2 = (22.5 <= angle) & (angle < 67.5)
+    mask3 = (67.5 <= angle) & (angle < 112.5)
+    mask4 = (112.5 <= angle) & (angle < 157.5)
+    
+    # Apply non-maximum suppression based on angle masks
+    Z[mask1] = ((G[mask1] >= n1[mask1]) & (G[mask1] >= n5[mask1])) * G[mask1]
+    Z[mask2] = ((G[mask2] >= n2[mask2]) & (G[mask2] >= n6[mask2])) * G[mask2]
+    Z[mask3] = ((G[mask3] >= n3[mask3]) & (G[mask3] >= n7[mask3])) * G[mask3]
+    Z[mask4] = ((G[mask4] >= n4[mask4]) & (G[mask4] >= n8[mask4])) * G[mask4]
+    
     return Z
 
 def double_threshold(img: np.ndarray, low_ratio: float = 0.05, high_ratio: float = 0.15):
@@ -70,30 +73,40 @@ def double_threshold(img: np.ndarray, low_ratio: float = 0.05, high_ratio: float
     return (res, weak, strong) # Return the map and the values used for weak/strong
 
 def hysteresis(img: np.ndarray, weak: int, strong: int = 255) -> np.ndarray:
-    """(e) Track edges by hysteresis: keep weak if connected to strong."""
+    """(e) Track edges by hysteresis using more efficient operations."""
     M, N = img.shape
-    # Iterate through image pixels
-    for i in range(1, M-1):
-        for j in range(1, N-1):
-            # If the pixel is weak
-            if img[i,j] == weak:
-                # Check its 8 neighbors for a strong pixel
-                if ((img[i+1, j-1] == strong) or (img[i+1, j] == strong) or
-                    (img[i+1, j+1] == strong) or (img[i, j-1] == strong) or
-                    (img[i, j+1] == strong) or (img[i-1, j-1] == strong) or
-                    (img[i-1, j] == strong) or (img[i-1, j+1] == strong)):
-                    # If connected to strong, promote weak to strong
-                    img[i,j] = strong
-                else:
-                    # If not connected to strong, suppress (set to 0)
-                    img[i,j] = 0
-    # Return the final edge map (only strong pixels remain)
-    # Note: The input 'img' is modified in place and returned.
-    # Final map will have 0s and 'strong' values (e.g., 255)
+    # Create a padded version of the image for neighbor operations
+    padded = np.pad(img, pad_width=1, mode='constant', constant_values=0)
+    
+    # Find weak pixels
+    weak_pixels = img == weak
+    
+    while True:
+        # Find weak pixels that have at least one strong neighbor
+        neighbors = np.zeros_like(weak_pixels, dtype=bool)
+        
+        # Check all 8 neighbors efficiently using padded array
+        for i in range(3):
+            for j in range(3):
+                if i == 1 and j == 1:
+                    continue
+                # Use correct slice of padded array matching original dimensions
+                neighbors |= (padded[i:i+M, j:j+N] == strong)
+        
+        # Update weak pixels that should be promoted
+        promote = weak_pixels & neighbors
+        if not promote.any():
+            break
+            
+        img[promote] = strong
+        weak_pixels[promote] = False
+    
+    # Set remaining weak pixels to 0
+    img[img == weak] = 0
     return img
 
 def canny_edge_detector(image: np.ndarray,
-                        sigma: float = 1.4,
+                        sigma: float = 1.2,
                         # Increased default low_ratio for stricter weak pixel threshold
                         low_ratio: float = 0.10, # <-- Increased from 0.05
                         high_ratio: float = 0.15) -> np.ndarray:
@@ -119,15 +132,3 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python edge_detection.py path/to/image")
         sys.exit(1)
-
-    img = imageio.imread(sys.argv[1], as_gray=True).astype(np.float32)
-    # Example of calling with specific parameters if needed:
-    # edge_map = canny_edge_detector(img, sigma=1.0, low_ratio=0.08, high_ratio=0.18)
-    edge_map = canny_edge_detector(img) # Uses the new defaults
-
-    plt.figure(figsize=(8,4))
-    plt.subplot(121), plt.imshow(img, cmap='gray'), plt.title('Original')
-    plt.axis('off')
-    plt.subplot(122), plt.imshow(edge_map, cmap='gray'), plt.title('Canny Edges')
-    plt.axis('off')
-    plt.show()
