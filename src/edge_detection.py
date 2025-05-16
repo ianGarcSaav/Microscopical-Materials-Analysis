@@ -38,7 +38,7 @@ def non_max_suppression(G: np.ndarray, theta: np.ndarray) -> np.ndarray:
     n7 = G_pad[:-2, 1:-1] # top
     n8 = G_pad[:-2, 2:]   # top-right
     
-    # Create masks for different angle ran  ges
+    # Create masks for different angle ranges
     mask1 = ((0 <= angle) & (angle < 22.5)) | ((157.5 <= angle) & (angle <= 180))
     mask2 = (22.5 <= angle) & (angle < 67.5)
     mask3 = (67.5 <= angle) & (angle < 112.5)
@@ -114,13 +114,21 @@ def canny_edge_detector(image: np.ndarray,
     Note: Default low_ratio increased for potentially cleaner edges.
     Optimal values depend on the image and should be tuned when calling.
     """
+    # 1. Noise Reduction (Gaussian filter)
     smooth = gaussian_filter(image, sigma)
+    
+    # 2. Gradient calculation (Sobel filters)
     G, theta = sobel_filters(smooth)
+    
+    # 3. Non-maximum suppression
     non_max = non_max_suppression(G, theta)
-    # Pass the adjusted ratios to double_threshold
+    
+    # 4. Double threshold
     dt, weak_val, strong_val = double_threshold(non_max, low_ratio, high_ratio)
-    # Pass the specific weak/strong values used by double_threshold to hysteresis
+    
+    # 5. Edge tracking by hysteresis
     edges = hysteresis(dt, weak_val, strong_val)
+    
     # Ensure the final output is uint8 with 0 and 255 values
     edges_uint8 = (edges == strong_val).astype(np.uint8) * 255
     return edges_uint8
