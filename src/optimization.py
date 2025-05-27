@@ -4,6 +4,7 @@ from multiprocessing import Pool
 import cv2
 import numpy as np
 from typing import List, Tuple, Dict, Any
+from tqdm import tqdm
 
 def get_safe_process_count() -> int:
     """
@@ -60,43 +61,60 @@ def process_images_parallel(image_files: List[str],
     """
     Procesa las imágenes en paralelo con manejo optimizado de recursos.
     Implementa las mejores prácticas de OpenCV para procesamiento paralelo.
+    Procesa en batches ordenados para mantener el orden de las imágenes.
     """
     if not verify_system_resources():
         print("Recursos del sistema insuficientes para continuar")
         return False
 
-    num_processes = get_safe_process_count()
-    print(f"Utilizando {num_processes} procesos para el procesamiento")
+    num_processes = min(4, get_safe_process_count())
+    print(f"\nUtilizando {num_processes} procesos para el procesamiento")
     
-    # Dividir imágenes en lotes para mejor manejo de memoria
-    batch_size = max(1, len(image_files) // num_processes)
-    batches = [image_files[i:i + batch_size] for i in range(0, len(image_files), batch_size)]
-    
+    # Procesar todas las imágenes en orden, en batches de 2
+    batch_size = 2  # Tamaño fijo de batch
+    total_images = len(image_files)
     results = []
     failed_images = []
     
-    # Procesar por lotes
-    for batch in batches:
-        args = [(img_file, img_folder, output_folders) for img_file in batch]
+    # Crear barra de progreso principal
+    with tqdm(total=total_images, 
+              desc="Progreso total", 
+              unit="img",
+              bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]") as pbar:
         
-        # Procesar lote en paralelo
-        with Pool(num_processes) as pool:
-            batch_results = list(pool.imap_unordered(process_single_image_func, args))
+        # Procesar por batches ordenados
+        for start_idx in range(0, total_images, batch_size):
+            end_idx = min(start_idx + batch_size, total_images)
+            current_batch = image_files[start_idx:end_idx]
             
-            # Procesar resultados del lote
-            for result in batch_results:
-                success, img_file, message = result
-                if not success:
-                    failed_images.append((img_file, message))
-                results.append(result)
+            # Mostrar información del batch actual
+            batch_info = f"Batch {start_idx//batch_size + 1}/{(total_images + batch_size - 1)//batch_size}"
+            tqdm.write(f"\n{batch_info}")
+            tqdm.write(f"Procesando: {', '.join(current_batch)}")
+            
+            args = [(img_file, img_folder, output_folders) for img_file in current_batch]
+            
+            # Procesar batch actual en paralelo
+            with Pool(min(len(current_batch), num_processes)) as pool:
+                batch_results = pool.map(process_single_image_func, args)
+                
+                # Procesar resultados del batch actual (manteniendo orden)
+                for result in batch_results:
+                    success, img_file, message = result
+                    if success:
+                        tqdm.write(f"✓ {img_file}: Procesada exitosamente")
+                    else:
+                        tqdm.write(f"✗ {img_file}: {message}")
+                        failed_images.append((img_file, message))
+                    results.append(result)
+                    pbar.update(1)  # Actualizar barra de progreso
     
-    # Reportar resultados
-    total = len(image_files)
+    # Reportar resultados finales
     successful = len([r for r in results if r[0]])
     failed = len(failed_images)
     
     print(f"\nResumen del procesamiento:")
-    print(f"Total de imágenes: {total}")
+    print(f"Total de imágenes: {total_images}")
     print(f"Procesadas exitosamente: {successful}")
     print(f"Fallidas: {failed}")
     
