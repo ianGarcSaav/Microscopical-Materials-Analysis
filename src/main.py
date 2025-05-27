@@ -7,6 +7,7 @@ from config import img_folder, clusters_folder
 from preprocessing import read_image
 from labeling import label_components
 from edge_detection import canny_edge_detector
+from closing_edge import process_closed_edges, MorphologyParams, OPTIMAL_PARAMS
 
 def get_safe_process_count():
     """
@@ -33,9 +34,12 @@ def create_output_folders():
     Crea las carpetas necesarias para almacenar los resultados
     """
     folders = {
-        'edges': os.path.join(clusters_folder, 'edges'),
-        'closed_edges': os.path.join(clusters_folder, 'closed_edges'),
-        'labeled_masks': os.path.join(clusters_folder, 'labeled_masks')
+        'edges': os.path.join(clusters_folder, '1.edges'),
+        'closed_edges': os.path.join(clusters_folder, '2.closed_edges'),
+        'filled_regions': os.path.join(clusters_folder, '3.filled_regions'),
+        'boundaries': os.path.join(clusters_folder, '4.boundaries'),
+        'enhanced': os.path.join(clusters_folder, '5.enhanced'),
+        'labeled_masks': os.path.join(clusters_folder, '6.labeled_masks')
     }
     
     for folder in folders.values():
@@ -63,60 +67,78 @@ def process_single_image(image_data):
     img_path = os.path.join(img_folder, image_file)
     print(f"Procesando: {image_file}")
 
-    # Extract output folder paths
-    edges_folder = output_folders['edges']
-    closed_edges_folder = output_folders['closed_edges']
-    labeled_masks_folder = output_folders['labeled_masks']
+    try:
+        # Extract output folder paths
+        edges_folder = output_folders['edges']
+        closed_edges_folder = output_folders['closed_edges']
+        filled_regions_folder = output_folders['filled_regions']
+        boundaries_folder = output_folders['boundaries']
+        enhanced_folder = output_folders['enhanced']
+        labeled_masks_folder = output_folders['labeled_masks']
 
-    # --- Step 1: Read and preprocess image ---
-    # _original.jpg
-    img = read_image(img_path)
-    if img is None or img.size == 0:
-        print(f"Error al leer la imagen: {image_file}")
-        return False, image_file, "Error al leer la imagen"
+        # --- Step 1: Read and preprocess image ---
+        img = read_image(img_path)
+        if img is None or img.size == 0:
+            return False, image_file, "Error al leer la imagen"
 
-    # --- Step 2: Canny Edge Detection ---
-    # _edges.jpg
-    # Convert to float32 once and reuse
-    edges = canny_edge_detector(img)
-    if edges is None or edges.size == 0:
-        print(f"Error en detección de bordes para: {image_file}")
-        return False, image_file, "Error en detección de bordes"
+        # --- Step 2: Canny Edge Detection ---
+        edges = canny_edge_detector(img)
+        if edges is None or edges.size == 0:
+            return False, image_file, "Error en detección de bordes"
 
-    edges_output_path = os.path.join(edges_folder, f"{os.path.splitext(image_file)[0]}_edges.jpg")
-    if not cv2.imwrite(edges_output_path, edges):
-        print(f"Error al guardar bordes para: {image_file}")
-        return False, image_file, "Error al guardar bordes"
+        edges_output_path = os.path.join(edges_folder, f"{os.path.splitext(image_file)[0]}_edges.jpg")
+        if not cv2.imwrite(edges_output_path, edges):
+            return False, image_file, "Error al guardar bordes"
 
-    # --- Step 3: Close edges --- 
-    # _closed_edges.jpg
-    kernel = np.ones((3,3), np.uint8)
-    closed_edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
-    if closed_edges is None or closed_edges.size == 0:
-        print(f"Error en cierre de bordes para: {image_file}")
-        return False, image_file, "Error en cierre de bordes"
+        # --- Step 3: Process Closed Edges ---
+        try:
+            closed, filled, boundaries, enhanced = process_closed_edges(edges, OPTIMAL_PARAMS)
+        except Exception as e:
+            return False, image_file, f"Error en procesamiento de bordes: {str(e)}"
+        
+        # Guardar resultados del procesamiento de bordes
+        base_name = os.path.splitext(image_file)[0]
+        
+        # Guardar bordes cerrados
+        closed_edges_path = os.path.join(closed_edges_folder, f"{base_name}_closed_edges.jpg")
+        if not cv2.imwrite(closed_edges_path, closed):
+            return False, image_file, "Error al guardar bordes cerrados"
+        
+        # Guardar regiones rellenas
+        filled_path = os.path.join(filled_regions_folder, f"{base_name}_filled.jpg")
+        if not cv2.imwrite(filled_path, filled):
+            return False, image_file, "Error al guardar regiones rellenas"
+        
+        # Guardar fronteras
+        boundaries_path = os.path.join(boundaries_folder, f"{base_name}_boundaries.jpg")
+        if not cv2.imwrite(boundaries_path, boundaries):
+            return False, image_file, "Error al guardar fronteras"
+        
+        # Guardar imagen mejorada
+        enhanced_path = os.path.join(enhanced_folder, f"{base_name}_enhanced.jpg")
+        if not cv2.imwrite(enhanced_path, enhanced):
+            return False, image_file, "Error al guardar imagen mejorada"
 
-    closed_edges_output_path = os.path.join(closed_edges_folder, f"{os.path.splitext(image_file)[0]}_closed_edges.jpg")
-    if not cv2.imwrite(closed_edges_output_path, closed_edges):
-        print(f"Error al guardar bordes cerrados para: {image_file}")
-        return False, image_file, "Error al guardar bordes cerrados"
+        # --- Step 4: Label components ---
+        try:
+            labeled_image, num_labels = label_components(enhanced)
+            if labeled_image is None:
+                return False, image_file, "Error en etiquetado"
 
-    # --- Step 4: Label components ---
-    # _labeled_mask.jpg
-    labeled_image, num_labels = label_components(closed_edges)
-    if labeled_image is None:
-        print(f"Error en etiquetado para: {image_file}")
-        return False, image_file, "Error en etiquetado"
+            print(f"Número de componentes encontrados en {image_file}: {num_labels}")
 
-    print(f"Número de componentes encontrados en {image_file}: {num_labels}")
+            # Guardar imagen etiquetada
+            labeled_output_path = os.path.join(labeled_masks_folder, f"{base_name}_labeledMask.jpg")
+            if not cv2.imwrite(labeled_output_path, labeled_image):
+                return False, image_file, "Error al guardar máscara etiquetada"
 
-    # Guardar imagen etiquetada
-    labeled_output_path = os.path.join(labeled_masks_folder, f"{os.path.splitext(image_file)[0]}_labeledMask.jpg")
-    if not cv2.imwrite(labeled_output_path, cv2.cvtColor(labeled_image, cv2.COLOR_RGB2BGR)):
-        print(f"Error al guardar máscara etiquetada para: {image_file}")
-        return False, image_file, "Error al guardar máscara etiquetada"
+        except Exception as e:
+            return False, image_file, f"Error en etiquetado: {str(e)}"
 
-    return True, image_file, "Procesamiento exitoso"
+        return True, image_file, "Procesamiento exitoso"
+        
+    except Exception as e:
+        return False, image_file, f"Error inesperado: {str(e)}"
 
 def process_images_parallel(image_files, img_folder, output_folders):
     """
