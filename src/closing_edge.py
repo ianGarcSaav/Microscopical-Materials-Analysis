@@ -56,7 +56,7 @@ def close_edges(edges: np.ndarray, params: Optional[MorphologyParams] = None) ->
 
 def fill_regions(closed_edges: np.ndarray, params: Optional[MorphologyParams] = None) -> np.ndarray:
     """
-    Rellena las regiones cerradas.
+    Rellena las regiones cerradas de manera suave y conservadora.
     
     Args:
         closed_edges (np.ndarray): Imagen con bordes cerrados (2.closed_edges)
@@ -73,21 +73,21 @@ def fill_regions(closed_edges: np.ndarray, params: Optional[MorphologyParams] = 
     h, w = closed_edges.shape[:2]
     fill_mask = np.zeros((h + 2, w + 2), dtype=np.uint8)
     
-    # Encontrar contornos
-    contours, _ = cv2.findContours(closed_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Añadir un umbral de área máxima muy conservador
+    max_area = closed_edges.shape[0] * closed_edges.shape[1] * 0.15  # 15% del tamaño de la imagen
+    
+    # Encontrar contornos con aproximación más precisa
+    contours, _ = cv2.findContours(closed_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     
     # Crear imagen para el relleno
     filled = np.zeros_like(closed_edges)
     
-    # Rellenar cada contorno válido
+    # Filtrar contornos por área de manera más conservadora
     for contour in contours:
-        if cv2.contourArea(contour) >= params.min_area:
-            M = cv2.moments(contour)
-            if M['m00'] > 0:
-                cx = int(M['m10'] / M['m00'])
-                cy = int(M['m01'] / M['m00'])
-                if 0 <= cx < w and 0 <= cy < h:
-                    cv2.floodFill(filled, fill_mask, (cx, cy), 255)
+        area = cv2.contourArea(contour)
+        if params.min_area <= area <= max_area:
+            # Usar fillPoly para un relleno más preciso
+            cv2.fillPoly(filled, [contour], 255)
     
     return filled
 
@@ -119,7 +119,7 @@ def extract_boundaries(filled_regions: np.ndarray, params: Optional[MorphologyPa
     
     return boundaries
 
-def process_closed_edges(edges: np.ndarray, params: Optional[MorphologyParams] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def process_closed_edges(edges: np.ndarray, params: Optional[MorphologyParams] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Procesa los bordes siguiendo un flujo lineal.
     
@@ -128,11 +128,10 @@ def process_closed_edges(edges: np.ndarray, params: Optional[MorphologyParams] =
         params (MorphologyParams, optional): Parámetros de morfología
         
     Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: 
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: 
             - closed_edges: Bordes cerrados (2.closed_edges)
             - filled_regions: Regiones rellenas (3.filled_regions)
             - boundaries: Fronteras (4.boundaries)
-            - enhanced: Imagen final mejorada (5.enhanced)
     """
     validate_input(edges, "process_closed_edges")
     if params is None:
@@ -148,10 +147,7 @@ def process_closed_edges(edges: np.ndarray, params: Optional[MorphologyParams] =
         # 4. Extraer fronteras
         boundaries = extract_boundaries(filled_regions, params)
         
-        # 5. Imagen mejorada (usando directamente filled_regions)
-        enhanced = filled_regions
-        
-        return closed_edges, filled_regions, boundaries, enhanced
+        return closed_edges, filled_regions, boundaries
         
     except Exception as e:
         raise RuntimeError(f"Error en el procesamiento: {str(e)}")
@@ -198,9 +194,9 @@ def optimize_array_operations(img: np.ndarray) -> np.ndarray:
     normalized = np.clip((img - img.mean()) / img.std(), -3, 3)
     return normalized
 
-# Parámetros optimizados
+# Parámetros optimizados más conservadores
 OPTIMAL_PARAMS = MorphologyParams(
-    close_kernel_size=(3, 3),    # Kernel (3,3) para cierre morfológico
-    min_area=150,               # Área mínima para filtrar regiones pequeñas
-    contour_thickness=2         # Grosor de contornos
+    close_kernel_size=(1, 1),    # Kernel mínimo para máxima precisión
+    min_area=25,                 # Área mínima muy pequeña para preservar detalles
+    contour_thickness=1          # Grosor mínimo de contorno
 ) 
