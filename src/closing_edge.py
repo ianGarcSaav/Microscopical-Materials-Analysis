@@ -6,9 +6,9 @@ from dataclasses import dataclass
 @dataclass
 class MorphologyParams:
     """Parámetros para operaciones morfológicas."""
-    close_kernel_size: Tuple[int, int] = (3, 3)
-    min_area: int = 150
-    contour_thickness: int = 2
+    close_kernel_size: Tuple[int, int] = (2, 2)  # Kernel 2x2 para mejor cierre de bordes
+    min_area: int = 50  # Igualado al min_size del etiquetado
+    contour_thickness: int = 1
 
 def validate_input(img: np.ndarray, operation_name: str) -> bool:
     """
@@ -73,19 +73,16 @@ def fill_regions(closed_edges: np.ndarray, params: Optional[MorphologyParams] = 
     h, w = closed_edges.shape[:2]
     fill_mask = np.zeros((h + 2, w + 2), dtype=np.uint8)
     
-    # Añadir un umbral de área máxima muy conservador
-    max_area = closed_edges.shape[0] * closed_edges.shape[1] * 0.15  # 15% del tamaño de la imagen
-    
     # Encontrar contornos con aproximación más precisa
     contours, _ = cv2.findContours(closed_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     
     # Crear imagen para el relleno
     filled = np.zeros_like(closed_edges)
     
-    # Filtrar contornos por área de manera más conservadora
+    # Filtrar y rellenar contornos
     for contour in contours:
         area = cv2.contourArea(contour)
-        if params.min_area <= area <= max_area:
+        if area >= params.min_area:
             # Usar fillPoly para un relleno más preciso
             cv2.fillPoly(filled, [contour], 255)
     
@@ -155,36 +152,44 @@ def process_closed_edges(edges: np.ndarray, params: Optional[MorphologyParams] =
 def improve_edge_detection(img: np.ndarray) -> np.ndarray:
     """
     Mejora la detección de bordes usando técnicas avanzadas de OpenCV.
+    Basado en las mejores prácticas de la documentación de OpenCV.
     """
-    # Reducción de ruido
-    denoised = cv2.fastNlMeansDenoising(img)
+    # Convertir a escala de grises si es necesario
+    if len(img.shape) == 3:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    # Mejora de contraste
-    lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
+    # 1. Reducción de ruido con filtro bilateral
+    # Preserva bordes mejor que el Gaussian blur
+    denoised = cv2.bilateralFilter(img, d=5, sigmaColor=75, sigmaSpace=75)
+    
+    # 2. Mejora de contraste adaptativo
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    l = clahe.apply(l)
-    enhanced = cv2.merge([l, a, b])
-    enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
+    enhanced = clahe.apply(denoised)
     
-    return enhanced
+    # 3. Normalización para mejorar la consistencia
+    normalized = cv2.normalize(enhanced, None, 0, 255, cv2.NORM_MINMAX)
+    
+    return normalized
 
 def improve_contour_closing(edges: np.ndarray) -> np.ndarray:
     """
-    Mejora el cierre de contornos usando técnicas morfológicas avanzadas.
+    Mejora el cierre de contornos usando técnicas morfológicas adaptativas.
     """
-    # Kernel adaptativo basado en el tamaño de la imagen
-    kernel_size = max(3, min(edges.shape) // 100)
+    # Asegurar tipo de datos correcto
+    edges = edges.astype(np.uint8)
+    
+    # Calcular tamaño de kernel adaptativo
+    kernel_size = max(2, min(edges.shape) // 200)  # Más conservador
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
     
     # Cierre morfológico adaptativo
     closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
     
-    # Eliminación de ruido pequeño
-    closed = cv2.morphologyEx(closed, cv2.MORPH_OPEN, 
-                            cv2.getStructuringElement(cv2.MORPH_RECT, (2,2)))
+    # Limpiar ruido pequeño con apertura mínima
+    cleaned = cv2.morphologyEx(closed, cv2.MORPH_OPEN, 
+                             cv2.getStructuringElement(cv2.MORPH_RECT, (2,2)))
     
-    return closed
+    return cleaned
 
 def optimize_array_operations(img: np.ndarray) -> np.ndarray:
     """
@@ -194,9 +199,9 @@ def optimize_array_operations(img: np.ndarray) -> np.ndarray:
     normalized = np.clip((img - img.mean()) / img.std(), -3, 3)
     return normalized
 
-# Parámetros optimizados más conservadores
+# Parámetros optimizados para mejor compatibilidad con labeling
 OPTIMAL_PARAMS = MorphologyParams(
     close_kernel_size=(1, 1),    # Kernel mínimo para máxima precisión
-    min_area=25,                 # Área mínima muy pequeña para preservar detalles
+    min_area=25,                 # Área mínima alineada con labeling.py
     contour_thickness=1          # Grosor mínimo de contorno
 ) 
