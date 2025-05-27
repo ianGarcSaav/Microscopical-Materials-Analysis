@@ -6,9 +6,9 @@ from dataclasses import dataclass
 @dataclass
 class MorphologyParams:
     """Parámetros para operaciones morfológicas."""
-    close_kernel_size: Tuple[int, int] = (3, 3)
-    min_area: int = 150
-    contour_thickness: int = 2
+    close_kernel_size: Tuple[int, int] = (2, 2)  # Kernel 2x2 para mejor cierre de bordes
+    min_area: int = 50  # Igualado al min_size del etiquetado
+    contour_thickness: int = 1
 
 def validate_input(img: np.ndarray, operation_name: str) -> bool:
     """
@@ -73,19 +73,16 @@ def fill_regions(closed_edges: np.ndarray, params: Optional[MorphologyParams] = 
     h, w = closed_edges.shape[:2]
     fill_mask = np.zeros((h + 2, w + 2), dtype=np.uint8)
     
-    # Añadir un umbral de área máxima muy conservador
-    max_area = closed_edges.shape[0] * closed_edges.shape[1] * 0.15  # 15% del tamaño de la imagen
-    
     # Encontrar contornos con aproximación más precisa
     contours, _ = cv2.findContours(closed_edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     
     # Crear imagen para el relleno
     filled = np.zeros_like(closed_edges)
     
-    # Filtrar contornos por área de manera más conservadora
+    # Filtrar y rellenar contornos
     for contour in contours:
         area = cv2.contourArea(contour)
-        if params.min_area <= area <= max_area:
+        if area >= params.min_area:
             # Usar fillPoly para un relleno más preciso
             cv2.fillPoly(filled, [contour], 255)
     
@@ -194,9 +191,9 @@ def optimize_array_operations(img: np.ndarray) -> np.ndarray:
     normalized = np.clip((img - img.mean()) / img.std(), -3, 3)
     return normalized
 
-# Parámetros optimizados más conservadores
+# Parámetros optimizados para mejor compatibilidad con el etiquetado
 OPTIMAL_PARAMS = MorphologyParams(
-    close_kernel_size=(1, 1),    # Kernel mínimo para máxima precisión
-    min_area=25,                 # Área mínima muy pequeña para preservar detalles
+    close_kernel_size=(1, 1),    # Kernel 2x2 para mejor balance
+    min_area=25,                 # Igualado al min_size del etiquetado
     contour_thickness=1          # Grosor mínimo de contorno
 ) 
