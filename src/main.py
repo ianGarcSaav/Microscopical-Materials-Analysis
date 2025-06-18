@@ -1,120 +1,89 @@
-import os
-import numpy as np
+import glob
+from pathlib import Path
 import cv2
-from config import img_folder, clusters_folder
-from preprocessing import read_image
-from labeling import label_components
-from edge_detection import canny_edge_detector
-from closing_edge import process_closed_edges, MorphologyParams, OPTIMAL_PARAMS
-from optimization import process_images_parallel
+import sys
 
-def create_output_folders():
-    """
-    Crea las carpetas necesarias para almacenar los resultados
-    """
-    folders = {
-        'edges': os.path.join(clusters_folder, '1.edges'),
-        'closed_edges': os.path.join(clusters_folder, '2.closed_edges'),
-        'filled_regions': os.path.join(clusters_folder, '3.filled_regions'),
-        'boundaries': os.path.join(clusters_folder, '4.boundaries'),
-        'labeled_masks': os.path.join(clusters_folder, '5.labeled_masks')
-    }
-    
-    for folder in folders.values():
-        os.makedirs(folder, exist_ok=True)
-    
-    return folders
+# Añadir el directorio raíz del proyecto al path de Python
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
 
-def process_single_image(image_data):
-    """
-    Procesa una única imagen con verificaciones explícitas.
-    """
-    image_file, img_folder, output_folders = image_data
-    img_path = os.path.join(img_folder, image_file)
-    print(f"Procesando: {image_file}")
-
-    try:
-        # Extract output folder paths
-        edges_folder = output_folders['edges']
-        closed_edges_folder = output_folders['closed_edges']
-        filled_regions_folder = output_folders['filled_regions']
-        boundaries_folder = output_folders['boundaries']
-        labeled_masks_folder = output_folders['labeled_masks']
-
-        # --- Step 1: Read and preprocess image ---
-        img = read_image(img_path)
-        if img is None or img.size == 0:
-            return False, image_file, "Error al leer la imagen"
-
-        # --- Step 2: Canny Edge Detection ---
-        edges = canny_edge_detector(img)
-        if edges is None or edges.size == 0:
-            return False, image_file, "Error en detección de bordes"
-
-        edges_output_path = os.path.join(edges_folder, f"{os.path.splitext(image_file)[0]}_edges.jpg")
-        if not cv2.imwrite(edges_output_path, edges):
-            return False, image_file, "Error al guardar bordes"
-
-        # --- Step 3: Process Closed Edges ---
-        try:
-            closed, filled, boundaries = process_closed_edges(edges, OPTIMAL_PARAMS)
-        except Exception as e:
-            return False, image_file, f"Error en procesamiento de bordes: {str(e)}"
-        
-        # Guardar resultados del procesamiento de bordes
-        base_name = os.path.splitext(image_file)[0]
-        
-        # Guardar bordes cerrados
-        closed_edges_path = os.path.join(closed_edges_folder, f"{base_name}_closed_edges.jpg")
-        if not cv2.imwrite(closed_edges_path, closed):
-            return False, image_file, "Error al guardar bordes cerrados"
-        
-        # Guardar regiones rellenas
-        filled_path = os.path.join(filled_regions_folder, f"{base_name}_filled.jpg")
-        if not cv2.imwrite(filled_path, filled):
-            return False, image_file, "Error al guardar regiones rellenas"
-        
-        # Guardar fronteras
-        boundaries_path = os.path.join(boundaries_folder, f"{base_name}_boundaries.jpg")
-        if not cv2.imwrite(boundaries_path, boundaries):
-            return False, image_file, "Error al guardar fronteras"
-
-        # --- Step 4: Label components ---
-        try:
-            labeled_image, num_labels = label_components(filled)
-            if labeled_image is None:
-                return False, image_file, "Error en etiquetado"
-
-            print(f"Número de componentes encontrados en {image_file}: {num_labels}")
-
-            # Guardar imagen etiquetada
-            labeled_output_path = os.path.join(labeled_masks_folder, f"{base_name}_labeledMask.jpg")
-            if not cv2.imwrite(labeled_output_path, labeled_image):
-                return False, image_file, "Error al guardar máscara etiquetada"
-
-        except Exception as e:
-            return False, image_file, f"Error en etiquetado: {str(e)}"
-
-        return True, image_file, "Procesamiento exitoso"
-        
-    except Exception as e:
-        return False, image_file, f"Error inesperado: {str(e)}"
-
-def main():
-    # Crear las carpetas de salida
-    output_folders = create_output_folders()
-    
-    # Obtener lista de imágenes
-    image_files = [f for f in os.listdir(img_folder) if f.endswith('.jpg') or f.endswith('.png')]
-    
-    if not image_files:
-        print("No se encontraron imágenes para procesar")
-        return
-    
-    # Procesar imágenes en paralelo
-    if not process_images_parallel(image_files, img_folder, output_folders, process_single_image):
-        print("Error en el procesamiento paralelo")
-        return
+# Importar las funciones de los otros módulos
+from src.edges.cannyEdge import process_image_with_canny
+from src.segmentation.semanticSegmentation import generate_border
+from src.config import (
+    RAW_DATA_DIR,
+    PROCESSED_DATA_DIR,
+    IMAGE_MEASUREMENTS_DIR,
+    SCATTERS_DIR,
+    HISTOGRAMS_DIR,
+    ensure_directory_exists,
+    verify_path,
+    get_files_in_directory,
+    RAW_DATA_PATHS
+)
 
 if __name__ == "__main__":
-    main()
+    print("\n=== Iniciando proceso de segmentación de imágenes ===")
+    
+    # Rutas de entrada y salida usando config.py
+    ruta_imagenes_originales = RAW_DATA_PATHS['high_res']  # Usar la ruta correcta del diccionario
+    ruta_canny_salida = PROCESSED_DATA_DIR / 'canny_edges'
+    ruta_border_salida = PROCESSED_DATA_DIR / 'borderMasks'
+
+    # Verificar que las rutas existen
+    print("\nVerificando rutas de entrada y salida...")
+    if not verify_path(ruta_imagenes_originales):
+        print(f"❌ Error: No se encontró el directorio de imágenes originales: {ruta_imagenes_originales}")
+        print("Por favor, asegúrate de que las imágenes estén en el directorio correcto.")
+        sys.exit(1)
+
+    # Crear y limpiar directorios de salida
+    print("\nPreparando directorios de salida...")
+    for path in [ruta_canny_salida, ruta_border_salida]:
+        ensure_directory_exists(path)
+
+    # Verificar que hay imágenes para procesar
+    print("\nBuscando imágenes para procesar...")
+    image_files = get_files_in_directory(ruta_imagenes_originales, "*.jpg")
+    if not image_files:
+        print("❌ Error: No se encontraron imágenes .jpg en el directorio de entrada")
+        print(f"Directorio buscado: {ruta_imagenes_originales}")
+        sys.exit(1)
+    
+    print(f"\nSe encontraron {len(image_files)} imágenes para procesar")
+
+    # Procesar cada imagen
+    for file_path in image_files:
+        name = Path(file_path).stem
+        print(f"\n--- Procesando imagen: {name} ---")
+
+        # Paso 1: Generar bordes Canny
+        print("Generando bordes Canny...")
+        canny_output_path = process_image_with_canny(file_path, ruta_canny_salida)
+        
+        if canny_output_path is None:
+            print(f"    🚫 No se pudo generar bordes Canny para {name}. Saltando máscara de borde.")
+            continue
+        
+        # Cargar la imagen Canny generada para pasarla a generate_border
+        print("Cargando imagen Canny para procesamiento...")
+        img_canny = cv2.imread(str(canny_output_path), cv2.IMREAD_GRAYSCALE)
+        if img_canny is None:
+            print(f"    🚫 Error al cargar la imagen Canny guardada: {canny_output_path}. Saltando máscara de borde.")
+            continue
+
+        # Asegurarse de que la imagen Canny sea binaria para generate_border
+        print("Aplicando umbral binario...")
+        _, binary_canny_for_border = cv2.threshold(img_canny, 127, 255, cv2.THRESH_BINARY) 
+
+        # Paso 2: Generar máscara con borde a partir de los bordes Canny
+        print("Generando máscara con borde...")
+        border_mask = generate_border(binary_canny_for_border, border_size=5, n_erosions=1)
+        
+        # Guardar la máscara con borde
+        border_output_file_path = ruta_border_salida / f"{name}_border.jpg"
+        cv2.imwrite(str(border_output_file_path), border_mask)
+        print(f"    ✅ Máscara con borde guardada en: {border_output_file_path}")
+
+    print("\n=== Proceso principal completado ===")
+    print("Revisa los resultados en las carpetas de processed_data.")
