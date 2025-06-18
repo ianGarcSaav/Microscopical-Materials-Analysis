@@ -9,8 +9,8 @@ build/
 *.egg-info/
 
 # Project files
-raw/
-Sin usar/
+data/
+outputs/
 
 # Virtual environment
 venv/
@@ -22,3 +22,8 @@ env/
 .idea/
 *.swp
 *.swo
+
+# Extras
+raw/
+Sin usar/
+
