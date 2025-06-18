@@ -1,21 +1,24 @@
-# Carpetas del proyecto
-results/
-images/
-models/
-src/__pycache__
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Archivos del proyecto
-Imagen prueba.pptx
-Test.png
-restart.py
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
 
-# Archivos de caché de Jupyter Notebook
-*.ipynb_checkpoints/
+# Project files
+raw/
+Sin usar/
 
-# Archivos de logs
-*.log
+# Virtual environment
+venv/
+env/
+.env/
 
-# Archivos compilados de Python
-*.pyc
-*.pyo
-*.pyd
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
