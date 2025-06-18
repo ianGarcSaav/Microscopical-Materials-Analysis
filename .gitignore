@@ -1,0 +1,23 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Project files
+data/
+outputs/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Extras
+pruebas/
+
