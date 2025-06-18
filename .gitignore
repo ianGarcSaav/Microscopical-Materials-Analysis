@@ -12,11 +12,6 @@ build/
 data/
 outputs/
 
-# Virtual environment
-venv/
-env/
-.env/
-
 # IDE specific files
 .vscode/
 .idea/
@@ -25,4 +20,5 @@ env/
 
 # Extras
 raw/
+pruebas/
 
