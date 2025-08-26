@@ -11,6 +11,7 @@ build/
 # Project files
 data/
 outputs/
+pruebas/
 
 # IDE specific files
 .vscode/
@@ -18,6 +19,4 @@ outputs/
 *.swp
 *.swo
 
-# Extras
-pruebas/
 
